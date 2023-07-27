@@ -1,8 +1,8 @@
 # Mean Effective Temperature Estimation via Confidence Intervals and Exploring the Relationship between Effective Temperature and Iron Abundance via A Linear Regression Analysis
 
 **Authors:** 
-Marshal Guo (1009468416)  
-Kin Fung Ng (1009117849)
+Marshal Guo (Question 2),
+Kin Fung Ng (Question 1)
 
 **Affiliation:** 
 University of Toronto (St. George)
@@ -27,7 +27,7 @@ Furthermore, we wanted to study if there is a general relationship between the e
 After a star is born, the star will age and become a red giant after a while. Since aging takes billions of years the elements that fuel the fusion process deplete. Fusion is the process of fusing lighter elements into heavier elements generating energy as a byproduct. With an interest in how hot the red giant is, we initiate the study. In this study, we will be using the data called "teff" which provides the effective temperature of stars in Kelvin to specifically look at the effective temperature of red giant stars. Also the statistical method we used in this study is confidence interval which is commonly used to estimate a population mean along with a percentage of confidence for the approximation.
 
 ### Familiarizing with the data
-Given the SSDS APOGEE dataset, it contains 22 one-dimension datasets at our disposal, each containing observations of a single attribute in the sample of the red giants. In this case, we take only the "teff" data to analyze and we then have these 99705 observations.
+Given the [APOGEE-2 SSDS](https://www.sdss4.org/dr17/irspec/) dataset, it contains 22 one-dimension datasets at our disposal, each containing observations of a single attribute in the sample of the red giants. In this case, we take only the "teff" data to analyze and we then have these 99705 observations.
 The "teff" dataset contains observations on the effective temperature of each red giant of the sample, which is associated with the black body radiation of a star and is often used as a measurement of the surface temperature of star bodies (Kangro, 1976).
 
 ### Visualizing the Distribution of the attribute
