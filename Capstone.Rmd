@@ -1,0 +1,216 @@
+---
+title: "STA130 Capstone Project: Effective Temperature Analysis on Red Giants (SDSS APOGEE)"
+author: "Marshal Guo (1009468416), Rex Ng (1009117849), with Josh Speagle & Scott Schwartz"
+subtitle: Effective Temperature of Red Giants
+urlcolor: blue
+output:
+  pdf_document: default
+---
+
+<!--Install the package to load the datasets in h5 format-->
+
+```{r, eval=FALSE}
+install.packages("BiocManager")
+BiocManager::install("rhdf5")
+```
+
+<!--Make default setting about data and code presentation in the following chunks-->
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(eval=TRUE, include=TRUE, echo=TRUE, message=FALSE, warning=FALSE)
+```
+
+<!--Load necessary libraries-->
+
+```{r, include=FALSE}
+library(rhdf5)
+library(tidyverse)
+library(ggplot2)
+header <- h5ls("STA130_APOGEE.h5")
+header
+```
+
+### Question 1: Is the average temperature of a red giant between 3400 to 4500 kelvin?
+
+Introduction: After a star is born, the star ages and becomes a red giant. Since the aging takes billions years the elements that fuel the fusion process depletes. With the interest in how got the red giant are, we initiate the study. In this study, we will be using the data called "teff" which provides the effective temperature of stars in Kelvin to specifically look at the effective temperature of red giant stars.
+
+**(0) Pretext Introduction** Introduction: After a star is born, the star ages and becomes a red giant. Since the aging takes billions years the elements that fuel the fusion process depletes. With the interest in how got the red giant are, we initiate the study. In this study, we will be using the data called "teff" which provides the effective temperature of stars in Kelvin to specifically look at the effective temperature of red giant stars. Also the statistical method we used in this study is Confidence interval that is commonly used to estimate a population mean along with a percentage of confidence for the approximation.\*
+
+**(0) Data description** The `teff` dataset contains observations on the effective temperature , of each red giant of the sample, which is corresponded to the black body radiation of a star and often used as a measurement of the surface temperature of star bodies (Kangro, 1976).
+
+**(1) Familiarize with the data** The dataset contains 22 1-D datasets, each contains observations of a single attribute in the sample of the red giants. We take only the `teff` datasets to analyse, and we have these 99,705 observations.
+
+```{r, include=False}
+teff <- "STA130_APOGEE.h5" %>% h5read('teff')
+teff <- tibble(teff = teff)
+head(teff)
+glimpse(teff)
+```
+
+**(2) Visualize the Distribution of the data** First lets take a look at the distribution of the effective temperature of the red giants. The range of different effective temperatures found in the sample is on the x-axis, which the y-axis shows the count of each binwidth(which is 100 kelvin). From the boxplot, we can tell that the median temperature is around 4650 kelvin while we can see that the effective temperature is mostly distributed between 4600 to 4700 kelvin. Hence the effective temperature is not normally distributed.
+
+```{r, include=False}
+ggplot(data = teff, aes(x = teff))+ geom_boxplot(color="black", fill="yellow")+labs(x='The effective temperature')+ coord_flip()
+```
+
+(2)Histogram
+
+```{r, include=False}
+ggplot(data = teff, aes(x = teff))+ geom_histogram(color="black", fill="yellow",bins = 30)+labs(x='The effective temperature')
+```
+
+**(3) Summaries the teff data**
+
+```{r, include=False}
+teff %>% summarise(
+  mean_temp = mean(teff),
+  median_temp = median(teff),
+  max_temp = max(teff),
+  n=n()
+)
+```
+
+**(4)Create Bootstrap sampling distribution**
+
+```{r, include=False}
+set.seed(100)
+boot_means <- rep(NA, 2000)
+
+for(i in 1:2000){
+  boot_sample <- teff %>% sample_n(size=99705 , replace = TRUE)
+  boot_means[i] <-
+    as.numeric(boot_sample%>%
+                 summarise(mean_temp = mean(teff)))
+}
+```
+
+**(5) create tidy data**
+
+```{r, include=False}
+boot_means <- tibble(mean_temp=boot_means)
+```
+
+**(6) Create Bootstrap sampling distribution for mean temperature**
+
+```{r, include=False}
+boot_means%>%
+  ggplot(aes(x=mean_temp))+
+  geom_histogram(color="black",fill="yellow")+
+  labs(x="99705 boot sample ")
+```
+
+**(7)Confidence Interval**
+
+```{r, include=False}
+Confidence_interval <- quantile(boot_means$mean_temp,c(0.05,0.95))
+Confidence_interval
+```
+
+**(8)Conclusion** \> According to our analysis. For 95% of time, there is a 95% chance that true mean temperature we captured the effective temperature lies between 4626.111 and 4628.694 kelvin. However, this observed result is inconsistent with my initial assumption that the average temperature of the red giant is between 3400-4500 kelvin.
+
+### Question 2: Is there a general relationship between the temperature of the red giants and the iron contents?
+
+**(0) Pretext** The motivation for the question was that since stars undergo fusion to generate energy, the lighter elements like hydrogen and helium atoms crash into each other and form heavier elements. As lighter elements fuse and create energy, there becomes a point where the lighter elements that fuel the process run out. Little by little, the temperature which is the output energy will be decreasing and approach depletion while heavier elements are being made constantly. Therefore, we want to see if there is a relationship between the temperature and a relatively heavier element iron presence in the stars' atmosphere.
+
+As a result, we noticed that applying simple linear regression technique will be most fitting. Thus, we first establish that our null hypothesis is "There is no correlation between the effective temperature and iron abundance." And our alternative hypothesis is "There is a correlation between the effective temperature and iron abundance."
+
+**(1) Familiarize With the Data** The dataset contains 22 1-D datasets, each contains observations of a single attribute in the sample of the red giants. We take only the `teff` and `fe_h` interassociated datasets to analyse, and we have these 99,705 observations.
+
+The `teff` dataset contains observations on the effective temperature , of each red giant of the sample, which is corresponded to the black body radiation of a star and often used as a measurement of the surface temperature of star bodies (Kangro, 1976).
+
+The `fe_h` dataset contains observations on the Fe_H value, of each star body of the sample, which is a measure of the abundance of elements heavier than helium in its atmosphere and defined as the logarithm of the ratio of iron to hydrogen abundance relative to the same ratio in the Sun (Haywood, 2020).
+
+First, we read the `teff` and `fe_h` from the file and put them in a tibble. After seeing the distribution of these two variables. We found there appears to be a lot of outliers for the distribution of the iron abundance. Since we want to find if there is a general relationship between the two attributes, we cleaned the `fe_h` column to only include data that is above the threshold -1.0 to represent the majority of behaviour in the distribution.
+
+```{r}
+teff <- "STA130_APOGEE.h5" %>% h5read('teff')
+fe_h <- "STA130_APOGEE.h5" %>% h5read('fe_h') 
+teff_vs_feh <- tibble(teff = teff, fe_h = fe_h) %>% filter(fe_h > -1.0)
+head(teff_vs_feh)
+glimpse(teff_vs_feh)
+```
+
+**(2) Visualize the Distribution of the Two Attributes** First, we take a look at the distribution of effective temperature of the red giants. The wide range of different effective temperatures found in the sample is on the x-axis, the y-axis shows the count of each binwidth (which is 100 kelvin). From the histogram, it's hard to categorize the shape of the graph. Thus from the summary table, we can tell the histogram is left-skewed since the mean (nearly 4628K) is less than the median (roughly 4674K). The spread is around 1500K, while 50% of the data is between 4674 and 4840 approximately. Suffice to say, the sample we were given on the effective temperature of the red giants is not normally distributed.
+
+```{r}
+ggplot(teff_vs_feh, aes(x = teff)) + labs(x = 'Effective Temperature (Kelvins)') + geom_histogram(binwidth = 100)
+```
+
+```{r}
+summary(teff)
+```
+
+```{r}
+ggplot(teff_vs_feh, aes(x = teff)) + labs(x = 'Effective Temperature (Kelvins)') + geom_boxplot()
+```
+
+Next, we look at the distribution of iron abundance of the stars. The iron abundance goes is the x-axis, and the y-axis shows the count of each binwidth which is 0.25. From the histogram, we get that it's left-skewed which is verified by the summary table that the mean (roughtly -0.232) is less than the median (roughly -0.199). The spread of the data is around 2.88. 50% of the data lies between -0.199 to -0.010 approximately. From our boxplot, we observed a few outliers below -1. Similary with the effective temperature, the iron content sample we possess from the sample isn't normally distributed either.
+
+```{r}
+ggplot(teff_vs_feh, aes(x = fe_h)) + labs(x = 'Element Iron Content Compared to Our Sun') + geom_histogram(binwidth = 0.25)
+```
+
+```{r}
+summary(fe_h)
+```
+
+```{r}
+ggplot(teff_vs_feh, aes(x = fe_h)) + labs(x = 'Element Iron Content') + geom_boxplot()
+```
+
+**(3) Visualizing the Relationship Between the Two Attributes** The effective temperature is the x-axis, and the iron abundance is the y-axis. Up front, we can see that the majority of the data clusters roughly between -1 to 0.5 for y-axis, and the rest of data are everywhere with quite a few outliers at the bottom of the pattern and for higher effective temperature. As we can see from the best fitted line, there is a positive linear relationship and the linear model has a positive but a somewhat flatter slope. Due to the large amount of data concentrating at the top forming a big bar of data points and only some amount of outliers below the best fitted line, we observe the linearity assumption is checked.
+
+```{r}
+ggplot(teff_vs_feh, aes(x = teff, y = fe_h)) + labs(x = 'Effective Temperature (Kelvins)', y = 'Element Iron Content Compared to Our Sun') + geom_point() + geom_smooth(method = lm,  se = FALSE)
+```
+
+**(4) Applying Simple Linear Regression** Here, we formally address our null and alternative hypotheses. The null hypothesis \\ $H_0 (p < \alpha)$: There is no correlation between the effective temperature and iron abundance in red giants; otherwise \\ $H_1 (p \geq \alpha)$: There is correlation between the effective temperature and iron abundance in red giants.
+
+The correlation coefficient tells us that there exists a weak but positive relationship between the two variables. However, we won't be bogged down by such and continue to observe statistics on the linear regression model.
+
+```{r}
+cor(x = teff_vs_feh$teff, y =  teff_vs_feh$fe_h)
+```
+
+The linear model demonstrates that the p value is less than $2.2 \times 10^{-16}$ and the simple linear regression model is:
+
+$$
+  y = (-2.544\times10^{-1}) + (1.242\times10^{-5})x
+$$
+
+```{r}
+linear_model <- lm(teff_vs_feh$fe_h ~ teff_vs_feh$teff, data = teff_vs_feh)
+summ <- summary(linear_model)
+summ
+```
+
+```{r}
+p_value = summ$coefficients["teff_vs_feh$teff", "Pr(>|t|)"]
+alpha = 0.05
+reject <- if_else(p_value < alpha, true = "Reject $H_0$", false='Fail to reject $H_0$')
+reject
+```
+
+In the end, we observe the p-value is indeed smaller than our alpha, then we reject the null hypothesis and accept that there is a relationship between the two variables. However, correlation coefficient is nearly 0, which informs us that we need to check if the assumptions for linear regression are fully satisfied.
+
+To begin with, we check if the data are evenly distributed both above and below the best fitted line. From the residual graph, we can see, for our sample, the data points are quite evenly distributed above and below the best fitted line. Thus the residual assumption is not violated.
+
+```{r}
+plot(fitted(linear_model), resid(linear_model), xlab = "Fitted Values", ylab = "Residuals") + abline(h = 0, col = 'red')
+```
+
+Secondly, we check if the residuals are normally distributed, we plot a Normal Q-Q graph and noticed that the two tails of the patterns are slightly deviated from the line, which means not all residuals are normal distributed. As a result, the residual normality distribution is slightly violated.
+
+```{r}
+plot(linear_model, which = 2)
+```
+
+**(5) Discussion** Given from the analysis, the two variables show a positive relationship. Although it is extremely weak, the p-value indicates that it's within the statistical significance range. This may be due to that the iron content may not be the only indicator for the surface temperature. Further experiments can be done with multi-linear regression to test not only iron content but also other elements such as carbon, magnesium, and so on to get a whole picture. Another factor could be that we are limited by the number observations and data; if we were given more data, we may get a more significant outcome. From the method of linear regression, it's helpful to notice of always checking if the assumptions are fully met. In our case, the assumptions seems to be met, and we were able to conclude the result is relevant.
+
+### Citation
+
+Davies1, B., Kudritzki4, R., Plez5, B., Trager6, S., Lançon7, A., Gazak4, Z., . . . Chiavassa11, A. (2013, March 18). IOPscience. Retrieved April 7, 2023, from <https://iopscience.iop.org/article/10.1088/0004-637X/767/1/3>
+
+Kangro, H. (1976). Early history of Planck's Radiation Law. London: Taylor and Francis.
+
+Haywood, M., Soubiran, O., & Lebzelter, T. (2020). The metallicity distribution of the Milky Way disk and bulge. Annual Review of Astronomy and Astrophysics, 58(1), 207-259. <https://doi.org/10.1146/annurev-astro-032620-021927>
